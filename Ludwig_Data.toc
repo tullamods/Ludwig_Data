@@ -1,0 +1,12 @@
+## Interface: 40000
+## Title: Ludwig Data
+## Author: Tuller & Jaliborc (João Libório)
+## Notes: Load on demand database for Ludwig
+
+## Dependencies: Ludwig
+## LoadOnDemand: 1
+
+..\Ludwig\database.lua
+..\Ludwig\items.lua
+..\Ludwig\ui.xml
+..\Ludwig\linkerator.xml
