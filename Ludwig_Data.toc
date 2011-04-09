@@ -9,4 +9,3 @@
 ..\Ludwig\database.lua
 ..\Ludwig\items.lua
 ..\Ludwig\ui.xml
-..\Ludwig\linkerator.xml
