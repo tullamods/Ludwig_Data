@@ -5,8 +5,6 @@
 
 ## Dependencies: Ludwig
 ## LoadOnDemand: 1
-
-..\Ludwig\database.lua
-..\Ludwig\items.lua
-..\Ludwig\ui.xml
-..\Ludwig\linkerator.xml
+data.lua
+items.lua
+frame.lua
