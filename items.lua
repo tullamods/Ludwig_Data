@@ -11,6 +11,15 @@
 	:IterateItems(string)
 		iterates all items in the database or the given string, returning id and name
 
+	:IterateClasses()
+		iterates all classes and the strings containing their subclasses
+
+	:IterateSubclasses(subclasses)
+		iterates all subclasses and the strings containing their slots in the given "subclasses string" (from :IterateClasses)
+
+	:IterateSlots(slots)
+		iterates all slots in the given "slots string" (from :IterateSubclasses)
+
 	:GetItemName(id)
 		returns name, colorHex
 
@@ -20,12 +29,16 @@
 local Ludwig = _G['Ludwig']
 local ItemDB = Ludwig:NewModule('ItemDB')
 
-local Markers, Matchers = {'{', '}', '$', '€', '£'}, {}
+local Markers, Matchers, Iterators = {'{', '}', '$', '€', '£'}, {}, {}
 local ItemMatch = '(%d+);([^;]+)'
 local Caches, Values = {}, {}
 
 for i, marker in ipairs(Markers) do
 	Matchers[i] = marker..'[^'..marker..']+'
+end
+
+for i = 1, 3 do
+	Iterators[i] = '([%a%s]+)' .. '(' .. Matchers[i] .. ';)'
 end
 
 local strsplit = strsplit
@@ -36,7 +49,7 @@ local tonumber = tonumber
 --[[ Search API ]]--
 
 function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLevel)
-	local search = search and {strsplit(' ', search:lower())}
+	local search = search and {strsplit(' ', strlower(search))}
 	local filters = {class, subClass, slot, quality}
 	local prevMin, prevMax = Values[5], Values[6]
 
@@ -65,12 +78,12 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 
 			-- Categories
 			if i < 4 then
-				results = results:match(match)
+				results = strmatch(results, match)
 
 			-- Quality
 			elseif i == 4 then
 				local items = ''
-				for section in results:gmatch(match) do
+				for section in gmatch(results, match) do
 					items = items .. section
 				end
 				results = items
@@ -90,8 +103,8 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 		local min = minLevel or -1/0
 		local max = maxLevel or 1/0
 
-		for section in (results or Ludwig_Data):gmatch('%d+'..Matchers[5]) do
-			local level = tonumber(section:match('^(%d+)'))
+		for section in gmatch(results or Ludwig_Data, '%d+'..Matchers[5]) do
+			local level = tonumber(strmatch(section, '^(%d+)'))
 			if level > min and level < max then
 				items = items .. section
 			end
@@ -108,10 +121,10 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 		match = true
 
 		if search then
-			name = name:lower()
+			name = strlower(name)
 
 			for i, word in ipairs(search) do
-				if not name:match(word) then
+				if not strmatch(name, word) then
 					match = nil
 					break
 				end
@@ -127,33 +140,52 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 end
 
 function ItemDB:GetItemNamedLike(search)
-	local search = '^'..search
-	for id, name in self:IterateItems(Ludwig_Data) do
-		if name:match(search) then
+	local search = '^' .. search:lower()
+	for id, name in self:IterateItems() do
+		if name:lower():match(search) then
 			return id, name
 		end
 	end
 end
 
 function ItemDB:IterateItems(section)
-	return section:gmatch(ItemMatch)
+	return (section or Ludwig_Data):gmatch(ItemMatch)
 end
 
 
---[[ Data API ]]--
+--[[ Categories API ]]--
+
+function ItemDB:IterateClasses()
+	return Ludwig_Data:gmatch(Iterators[1])
+end
+
+function ItemDB:IterateSubClasses(subs)
+	return subs:gmatch(Iterators[2])
+end
+
+function ItemDB:IterateSlots(slots)
+	return slots:gmatch(Iterators[3])
+end
+
+
+--[[ Item API ]]--
 
 function ItemDB:GetItemName(id)
 	if id then
-		local quality, name = Ludwig_Data:match(('(%%d+)€[^€]*%s;([^;]+)'):format(id))
+		local quality, name = strmatch(Ludwig_Data, '(%d+)€'..id..';([^;]+)')
+		if not name then
+			quality, name = strmatch(Ludwig_Data, '(%d+)€[^€]*[^%d]'..id..';([^;]+)')
+		end
+
 		if name then
 			return name, select(4, GetItemQualityColor(tonumber(quality)))
 		else
-			return ('Error: Item %s Not Found'):format(id), ''
+			return 'Error: Item' .. id .. ' Not Found', ''
 		end
 	end
 end
 
 function ItemDB:GetItemLink(id)
 	local name, hex = self:GetItemName(id)
-	return ('%s|Hitem:%d|h[%s]|h|r'):format(hex, id, name)
+	return hex..'|Hitem:'..id..'|h['..name..']|h|r'
 end
