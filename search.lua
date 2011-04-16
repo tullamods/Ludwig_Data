@@ -2,40 +2,36 @@ local Ludwig = _G['Ludwig']
 local Search = Ludwig:NewModule('Search')
 local ItemDB = Ludwig('ItemDB')
 
-local currentSearch = nil
 local needsUpdate = true
+
 local filter = {
-	name = '',
+	name = nil,
 	quality = nil,
-	type = nil,
-	subType = nil,
-	equipLoc = nil,
+	class = nil,
+	subClass = nil,
+	slot = nil,
 	minLevel = nil,
 	maxLevel = nil,
 }
 
 function Search:GetItems()
-	if needsUpdate then
-		currentSearch = itemDB:GetItems(
-			filter.name,
-			filter.quality,
-			filter.type,
-			filter.subType,
-			filter.equipLoc,
-			filter.minLevel,
-			filter.maxLevel
-		)
-		needsUpdate = false
-	end
-	return currentSearch
+	return ItemDB:GetItems(
+		filter.name,
+		filter.quality,
+		filter.class,
+		filter.subClass,
+		filter.slot,
+		filter.minLevel,
+		filter.maxLevel
+	)
 end
 
 function Search:SetFilter(index, value)
 	if filter[index] ~= value then
 		filter[index] = value
-		needsUpdate = true
+		return true
 	end
-	return needsUpdate
+	return false
 end
 
 function Search:GetFilter(index)
@@ -45,10 +41,9 @@ end
 function Search:Reset()
 	filter.name = ''
 	filter.quality = nil
-	filter.type = nil
-	filter.subType = nil
-	filter.equipLoc = nil
+	filter.class = nil
+	filter.subClass = nil
+	filter.slot = nil
 	filter.minLevel = nil
 	filter.maxLevel = nil
-	needsUpdate = true
 end

@@ -219,34 +219,51 @@ local function scrollFrame_Create(name, parent)
 end
 
 
+--[[ Dropdowns ]]--
+
+local function dropdown_CreateItem(self, func, text, value, ...)
+	local info = UIDropDownMenu_CreateInfo()
+	info.owner = self
+	info.text = text
+	info.value = value
+	info.func = func
+	
+	for i = 1, select('#', ...) do
+		info['arg' .. i] = select(i, ...)
+	end
+	
+	return info
+end
+
+local function dropdown_AddItem(self, func, text, value, ...)
+	return UIDropDownMenu_AddButton(dropdown_CreateItem(self, func, text, value, ...))
+end
+
 --[[ Quality Filter ]]--
 
-local function qualityFilter_OnClick(self, dropdown, ...)
-	UIDropDownMenu_SetSelectedValue(dropdown, self.value)
+local function qualityFilter_OnClick(self, ...)
+	UIDropDownMenu_SetSelectedValue(self.owner, self.value)
 	SearchFrame:SetSearchFilter('quality', self.value > -1 and self.value or nil)
 end
 
-local function qualityFilter_Initialize(self, level)
-	local info = UIDropDownMenu_CreateInfo()
-	info.text = ALL
-	info.value = -1
-	info.func = qualityFilter_OnClick
-	info.arg1 = self
-	UIDropDownMenu_AddButton(info)
-
+local function qualityFilter_Initialize(self, level)	
+	self:addItem(ALL, -1)
+	
 	for i = 0, #ITEM_QUALITY_COLORS do
 		local color = ITEM_QUALITY_COLORS[i]
-		info.text = color.hex .. _G[format('ITEM_QUALITY%d_DESC', i)] .. '|r'
-		info.value = i
-		info.func = qualityFilter_OnClick
-		info.arg1 = self
-		info.checked = nil
-		UIDropDownMenu_AddButton(info)
+		local text = color.hex .. _G[('ITEM_QUALITY%d_DESC'):format(i)] .. '|r'
+		
+		self:addItem(text, i)
 	end
 end
 
 local function qualityFilter_Create(name, parent)
 	local f = CreateFrame('Frame', name, parent, 'UIDropDownMenuTemplate')
+	
+	f.addItem = function(self, text, value, ...)
+		return dropdown_AddItem(self, qualityFilter_OnClick, text, value, ...)
+	end
+	
 	UIDropDownMenu_Initialize(f, qualityFilter_Initialize)
 	UIDropDownMenu_SetSelectedValue(f, -1);
 	UIDropDownMenu_SetWidth(f, 90)
@@ -257,11 +274,117 @@ end
 
 --[[ Type Filter ]]--
 
+local function typeFilter_UpdateText(self)
+	local class = Search:GetFilter('class')
+	local subClass = Search:GetFilter('subClass')
+	local slot = Search:GetFilter('slot')
+	
+	local text
+	if class and subClass and slot then
+		text = ('%s - %s'):format(subClass, slot)
+	elseif class and subClass then
+		text = ('%s - %s'):format(class, subClass)
+	elseif class then
+		text = class
+	else
+		text = ALL
+	end
+
+	_G[self:GetName() .. 'Text']:SetText(text)
+end
+
+local function typeFilter_OnClick(self, class, subClass)
+	print(class, subClass, self.value)
+
+	local selectedClass, selectedSubClass, selectedSlot
+	
+	if class and subClass then
+		selectedClass = class
+		selectedSubClass = subClass
+		selectedSlot = self.value
+	elseif class then
+		selectedClass = class
+		selectedSubClass = self.value
+		--selectedSlot = nil
+	elseif self.value ~= ALL then
+		selectedClass = self.value
+		--selectedSubClass = nil
+		--selectedSlot = nil
+	end
+	
+	SearchFrame:SetSearchFilter('class', selectedClass)
+	SearchFrame:SetSearchFilter('subClass', selectedSubClass)
+	SearchFrame:SetSearchFilter('slot', selectedSlot)
+	typeFilter_UpdateText(self.owner)
+end
+
+local selectedClass = nil
+local function typeFilter_Initialize(self, level)
+	local level = tonumber(level) or 1
+	if level == 1 then
+		self:addItem(level, ALL, ALL, ALL)
+		for class, subClasses in Ludwig('ItemDB'):IterateClasses() do
+			local hasArrow = false
+			for subClass, slots in Ludwig('ItemDB'):IterateSubClasses(subClasses) do
+				hasArrow = true
+				break
+			end
+			
+			local item = self:createItem(class, class)
+			item.hasArrow = hasArrow
+			UIDropDownMenu_AddButton(item, level)
+		end
+	elseif level == 2 then
+		selectedClass = _G['UIDROPDOWNMENU_MENU_VALUE']
+		for class, subClasses in Ludwig('ItemDB'):IterateClasses() do
+			if class == selectedClass then
+				for subClass, slots in Ludwig('ItemDB'):IterateSubClasses(subClasses) do
+					local hasArrow = false
+					for slot in Ludwig('ItemDB'):IterateSlots(slots) do
+						hasArrow = true
+						break
+					end
+					
+					local item = self:createItem(subClass, subClass, class)
+					item.hasArrow = hasArrow
+					UIDropDownMenu_AddButton(item, level)
+				end
+				break
+			end
+		end
+	elseif level == 3 then
+		local selectedSubClass = _G['UIDROPDOWNMENU_MENU_VALUE']
+		for class, subClasses in Ludwig('ItemDB'):IterateClasses() do
+			if class == selectedClass then
+				for subClass, slots in Ludwig('ItemDB'):IterateSubClasses(subClasses) do
+					if subClass == selectedSubClass then
+						for slot in Ludwig('ItemDB'):IterateSlots(slots) do
+							self:addItem(level, slot, slot, class, subClass)
+						end
+						break
+					end
+				end
+				break
+			end
+		end
+	end
+end
+
 local function typeFilter_Create(name, parent)
 	local f = CreateFrame('Frame', name, parent, 'UIDropDownMenuTemplate')
---	UIDropDownMenu_Initialize(self, Quality_Initialize)
+	
+	f.createItem = function(self, text, value, ...)
+		return dropdown_CreateItem(self, typeFilter_OnClick, text, value, ...)
+	end
+	
+	f.addItem = function(self, level, text, value, ...)
+		return UIDropDownMenu_AddButton(self:createItem(text, value, ...), level)
+	end
+	
+	UIDropDownMenu_Initialize(f, typeFilter_Initialize)
+	UIDropDownMenu_SetSelectedValue(f, ALL)
 	UIDropDownMenu_SetWidth(f, 200)
-
+	
 	return f
 end
 
@@ -483,6 +606,10 @@ function SearchFrame:SetSearchFilter(index, value)
 	if Search:SetFilter(index, value) then
 		scheduleUpdate(self)
 	end
+end
+
+function SearchFrame:GetSearchFilter(index)
+	return Search:GetFilter(index)
 end
 
 function SearchFrame:ClearSearch()
