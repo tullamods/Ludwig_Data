@@ -39,11 +39,7 @@ function Search:GetFilter(index)
 end
 
 function Search:Reset()
-	filter.name = ''
-	filter.quality = nil
-	filter.class = nil
-	filter.subClass = nil
-	filter.slot = nil
-	filter.minLevel = nil
-	filter.maxLevel = nil
+	for k, v in pairs(filter) do
+		filter[k] = nil
+	end
 end

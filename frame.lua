@@ -241,6 +241,18 @@ end
 
 --[[ Quality Filter ]]--
 
+local function qualityFilter_UpdateText(self)
+	local quality = Search:GetFilter('quality') or -1
+
+	if quality > -1 then
+		local color = ITEM_QUALITY_COLORS[quality]
+		local text = color.hex .. _G[('ITEM_QUALITY%d_DESC'):format(quality)] .. '|r'
+		_G[self:GetName() .. 'Text']:SetText(text)
+	else
+		_G[self:GetName() .. 'Text']:SetText(ALL)
+	end
+end
+
 local function qualityFilter_OnClick(self, ...)
 	UIDropDownMenu_SetSelectedValue(self.owner, self.value)
 	SearchFrame:SetSearchFilter('quality', self.value > -1 and self.value or nil)
@@ -294,8 +306,6 @@ local function typeFilter_UpdateText(self)
 end
 
 local function typeFilter_OnClick(self, class, subClass)
-	print(class, subClass, self.value)
-
 	local selectedClass, selectedSubClass, selectedSlot
 	
 	if class and subClass then
@@ -305,13 +315,11 @@ local function typeFilter_OnClick(self, class, subClass)
 	elseif class then
 		selectedClass = class
 		selectedSubClass = self.value
-		--selectedSlot = nil
 	elseif self.value ~= ALL then
 		selectedClass = self.value
-		--selectedSubClass = nil
-		--selectedSlot = nil
 	end
 	
+	UIDropDownMenu_SetSelectedValue(self.owner, self.value)
 	SearchFrame:SetSearchFilter('class', selectedClass)
 	SearchFrame:SetSearchFilter('subClass', selectedSubClass)
 	SearchFrame:SetSearchFilter('slot', selectedSlot)
@@ -417,6 +425,22 @@ local function frame_UpdateList(self)
 			button:Show()
 		end
 	end
+	
+	-- if not self.seeker then
+		-- local id = offset
+		-- local f = CreateFrame('Frame', nil, self)
+		-- f:SetScript('OnUpdate', function(self, elapsed)
+			-- if (self.delay or 0) <= 0 then
+				-- self.delay = 1
+				-- for i = start + ITEMS_TO_DISPLAY + 1, numResults do
+					-- local name, hex = ItemDB:GetItemName(itemId)
+				-- end
+			-- else
+				-- self.delay = self.delay - elapsed
+			-- end
+		-- end)
+		-- self.seeker = f
+	-- end
 
 	FauxScrollFrame_Update(
 		_G[self:GetName() .. 'ScrollFrame'],
@@ -630,6 +654,10 @@ function SearchFrame:ClearSearch()
 		_G[frameName .. 'MaxLevel']:SetText('')
 
 		UIDropDownMenu_SetSelectedValue(_G[frameName .. 'Quality'], -1)
+		qualityFilter_UpdateText(_G[frameName .. 'Quality'])
+		
+		UIDropDownMenu_SetSelectedValue(_G[frameName .. 'Type'], ALL)
+		typeFilter_UpdateText(_G[frameName .. 'Type'])
 	end
 
 	--update the frame

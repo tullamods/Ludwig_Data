@@ -91,7 +91,7 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 				results = items
 			end
 
-			Caches[i] = results
+--			Caches[i] = results
 		end
 	end
 
@@ -114,7 +114,7 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 
 		Values[5] = minLevel
 		Values[6] = maxLevel
-		Caches[5] = items
+--		Caches[5] = items
 
 		results = items
 	end
