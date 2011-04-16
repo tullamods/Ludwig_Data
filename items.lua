@@ -49,7 +49,7 @@ local tonumber = tonumber
 --[[ Search API ]]--
 
 function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLevel)
-	local search = search and {strsplit(' ', strlower(search))}
+	local search = search and {strsplit(' ', search:lower())}
 	local filters = {class, subClass, slot, quality}
 	local prevMin, prevMax = Values[5], Values[6]
 
@@ -78,12 +78,12 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 
 			-- Categories
 			if i < 4 then
-				results = strmatch(results, match)
+				results = results:match(match)
 
 			-- Quality
 			elseif i == 4 then
 				local items = ''
-				for section in gmatch(results, match) do
+				for section in results:gmatch(match) do
 					items = items .. section
 				end
 				results = items
@@ -100,31 +100,33 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 
 	elseif minLevel or maxLevel then
 		local items = ''
-		local min = minLevel or -1/0
-		local max = maxLevel or 1/0
+		local min = minLevel or -math.huge
+		local max = maxLevel or math.huge
 
-		for section in gmatch(results or Ludwig_Data, '%d+'..Matchers[5]) do
-			local level = tonumber(strmatch(section, '^(%d+)'))
+		for section in (results or Ludwig_Data):gmatch('%d+' .. Matchers[5]) do
+			local level = tonumber(section:match('^(%d+)'))
 			if level > min and level < max then
 				items = items .. section
 			end
 		end
 
-		Values[5], Values[6] = minLevel, maxLevel
+		Values[5] = minLevel
+		Values[6] = maxLevel
 		Caches[5] = items
+
 		results = items
 	end
 
 
 	-- Search Name
 	for id, name in self:IterateItems(results) do
-		match = true
+		local match = true
 
 		if search then
-			name = strlower(name)
+			local name = name:lower()
 
 			for i, word in ipairs(search) do
-				if not strmatch(name, word) then
+				if not name:match(word) then
 					match = nil
 					break
 				end
@@ -142,7 +144,8 @@ end
 function ItemDB:GetItemNamedLike(search)
 	local search = '^' .. search:lower()
 	for id, name in self:IterateItems() do
-		if name:lower():match(search) then
+		local lName = name:lower()
+		if lName:match(search) then
 			return id, name
 		end
 	end
@@ -172,20 +175,20 @@ end
 
 function ItemDB:GetItemName(id)
 	if id then
-		local quality, name = strmatch(Ludwig_Data, '(%d+)€'..id..';([^;]+)')
+		local quality, name = Ludwig_Data:match(('(%%d+)€%s;([^;]+)'):format(id))
 		if not name then
-			quality, name = strmatch(Ludwig_Data, '(%d+)€[^€]*[^%d]'..id..';([^;]+)')
+			quality, name = Ludwig_Data:match(('(%%d+)€[^€]*[^%%d]%s;([^;]+)'):format(id))
 		end
 
 		if name then
 			return name, select(4, GetItemQualityColor(tonumber(quality)))
 		else
-			return 'Error: Item' .. id .. ' Not Found', ''
+			return ('Error: Item %s Not Found'):format(id), ''
 		end
 	end
 end
 
 function ItemDB:GetItemLink(id)
 	local name, hex = self:GetItemName(id)
-	return hex..'|Hitem:'..id..'|h['..name..']|h|r'
+	return ('%s|Hitem:%s|h[%s]|h|r'):format(hex, id, name)
 end

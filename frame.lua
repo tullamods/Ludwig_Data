@@ -10,31 +10,6 @@ local ITEMS_TO_DISPLAY = 15
 local ITEM_HEIGHT = 22
 local ITEM_STEP = 1
 local DEFAULT_SEARCH_TEXT = _G['SEARCH']
-local Search = {
-	name = '',
-
-	getItems = function(self)
-		return ItemDB:GetItems(
-			self.name,
-			self.quality,
-			self.type,
-			self.subType,
-			self.equipLoc,
-			self.minLevel,
-			self.maxLevel
-		)
-	end,
-
-	reset = function(self)
-		self.name = ''
-		self.quality = nil
-		self.type = nil
-		self.subType = nil
-		self.equipLoc = nil
-		self.minLevel = nil
-		self.maxLevel = nil
-	end,
-}
 
 --[[ Item Button ]]--
 
@@ -501,7 +476,6 @@ local function scheduleUpdate(self)
 end
 
 function SearchFrame:SetSearchFilter(index, value)
-	print('setFilter', index, value)
 	if Search[index] ~= value then
 		Search[index] = value
 		scheduleUpdate(self)
