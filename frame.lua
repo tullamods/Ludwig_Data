@@ -1,5 +1,6 @@
 local Ludwig = _G['Ludwig']
 local SearchFrame = Ludwig:NewModule('SearchFrame')
+local Search = Ludwig('Search')
 
 --[[ Globals ]]--
 
@@ -267,7 +268,8 @@ end
 
 --[[ Search Frame ]]--
 
-local searchResults = Search:getItems()
+local searchResults = Search:GetItems()
+
 local function frame_UpdateList(self)
 	local numResults = #searchResults
 	_G[self:GetName() .. 'Title']:SetText(L.FrameTitle:format(numResults))
@@ -313,13 +315,13 @@ local function frame_OnUpdate(self, elapsed)
 		self.timer = self.timer - elapsed
 	else
 		self:SetScript('OnUpdate', nil)
-		searchResults = Search:getItems()
+		searchResults = Search:GetItems()
 		frame_UpdateList(self)
 	end
 end
 
 local function frame_OnShow(self)
-	searchResults = Search:getItems()
+	searchResults = Search:GetItems()
 	frame_UpdateList(self)
 	PlaySound('igCharacterInfoOpen')
 end
@@ -330,15 +332,16 @@ local function frame_OnHide(self)
 end
 
 local function frame_Create(name, parent)
-	local frame = CreateFrame('Frame', name, parent)
+	local frame = CreateFrame('Frame', name, parent); frame:Hide()
 	local frameName = frame:GetName()
 
 	--set attributes
-	frame:Hide()
 	frame:SetSize(384, 512)
 	frame:EnableMouse(true)
 	frame:SetToplevel(true)
 	frame:SetMovable(true)
+	frame:SetScript('OnShow', frame_OnShow)
+	frame:SetScript('OnHide', frame_OnHide)
 
 	frame:SetAttribute('UIPanelLayout-defined', true)
 	frame:SetAttribute('UIPanelLayout-enabled', true)
@@ -437,6 +440,7 @@ function SearchFrame:Show()
 	local frame = self.frame
 	if not frame then
 		frame = frame_Create('LudwigSearchFrame', UIParent)
+		table.insert(_G['UISpecialFrames'], frame:GetName())
 		self.frame = frame
 	end
 	ShowUIPanel(frame)
@@ -476,15 +480,14 @@ local function scheduleUpdate(self)
 end
 
 function SearchFrame:SetSearchFilter(index, value)
-	if Search[index] ~= value then
-		Search[index] = value
+	if Search:SetFilter(index, value) then
 		scheduleUpdate(self)
 	end
 end
 
 function SearchFrame:ClearSearch()
 	--clear search values
-	Search:reset()
+	Search:Reset()
 
 	--clear ui values
 	local frame = self.frame

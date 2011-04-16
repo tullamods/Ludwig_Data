@@ -28,6 +28,7 @@
 
 local Ludwig = _G['Ludwig']
 local ItemDB = Ludwig:NewModule('ItemDB')
+local Ludwig_Data = Ludwig_Data
 
 local Markers, Matchers, Iterators = {'{', '}', '$', '€', '£'}, {}, {}
 local ItemMatch = '(%d+);([^;]+)'
@@ -44,6 +45,7 @@ end
 local strsplit = strsplit
 local tinsert = table.insert
 local tonumber = tonumber
+local GetItemInfo = GetItemInfo
 
 
 --[[ Search API ]]--
@@ -175,9 +177,12 @@ end
 
 function ItemDB:GetItemName(id)
 	if id then
-		local quality, name = Ludwig_Data:match(('(%%d+)€%s;([^;]+)'):format(id))
-		if not name then
-			quality, name = Ludwig_Data:match(('(%%d+)€[^€]*[^%%d]%s;([^;]+)'):format(id))
+		local name, link, quality = GetItemInfo(id)
+		if not (name and quality) then
+			quality, name = Ludwig_Data:match(('(%%d+)€%s;([^;]+)'):format(id))
+			if not name then
+				quality, name = Ludwig_Data:match(('(%%d+)€[^€]*[^%%d]%s;([^;]+)'):format(id))
+			end
 		end
 
 		if name then
@@ -190,5 +195,5 @@ end
 
 function ItemDB:GetItemLink(id)
 	local name, hex = self:GetItemName(id)
-	return ('%s|Hitem:%s|h[%s]|h|r'):format(hex, id, name)
+	return ('%s\124Hitem:%d:0:0:0:0:0:0:0:%d:0\124h[%s]\124h\124r'):format(hex, tonumber(id), UnitLevel('player'), name)
 end

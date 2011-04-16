@@ -7,4 +7,5 @@
 ## LoadOnDemand: 1
 data.lua
 items.lua
+search.lua
 frame.lua
