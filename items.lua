@@ -1,7 +1,4 @@
 --[[
-	The API for retrieveing data from the database
-		By João Libório Cardoso (Jaliborc)
-
 	:GetItems(name, quality, class, subClass, slot, minLevel, maxLevel)
 		returns an ordered list of the item IDs that match the provided terms
 
