@@ -139,7 +139,7 @@ end
 
 local function minLevelSearchBox_OnTextChanged(self, isUserInput)
 	if isUserInput then
-		SearchFrame:SetSearchFilter('minLevel', tonumber(self:GetText()))
+		SearchFrame:SetSearchFilter('minLevel', self:GetText())
 	end
 end
 
@@ -166,7 +166,7 @@ end
 
 local function maxLevelSearchBox_OnTextChanged(self, isUserInput)
 	if isUserInput then
-		SearchFrame:SetSearchFilter('maxLevel', tonumber(self:GetText()))
+		SearchFrame:SetSearchFilter('maxLevel', self:GetText())
 	end
 end
 

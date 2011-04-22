@@ -1,26 +1,29 @@
 --[[
-	:GetItems(name, quality, class, subClass, slot, minLevel, maxLevel)
-		returns an ordered list of the item IDs that match the provided terms
+	API for searching in the item database
 
-	:GetItemNamedLike(name)
-		returns the id and name of the closest match (for linkerator support)
-
-	:IterateItems(string)
-		iterates all items in the database or the given string, returning id and name
-
-	:IterateClasses()
-		iterates all classes and the strings containing their subclasses
-
-	:IterateSubclasses(subclasses)
-		iterates all subclasses and the strings containing their slots in the given "subclasses string" (from :IterateClasses)
-
-	:IterateSlots(slots)
-		iterates all slots in the given "slots string" (from :IterateSubclasses)
-
-	:GetItemName(id)
-		returns name, colorHex
-
-	:GetItemLink(id)
+	Usage:
+		:GetItems(name, quality, class, subClass, slot, minLevel, maxLevel)
+			returns an ordered list of the item IDs that match the provided terms
+	
+		:GetItemNamedLike(name)
+			returns the id and name of the closest match (for linkerator support)
+	
+		:IterateItems(string)
+			iterates all items in the database or the given string, returning id and name
+	
+		:IterateClasses()
+			iterates all classes and the strings containing their subclasses
+	
+		:IterateSubclasses(subclasses)
+			iterates all subclasses and the strings containing their slots in the given "subclasses string" (from :IterateClasses)
+	
+		:IterateSlots(slots)
+			iterates all slots in the given "slots string" (from :IterateSubclasses)
+	
+		:GetItemName(id)
+			returns name, colorHex
+	
+		:GetItemLink(id)
 --]]
 
 local Ludwig = _G['Ludwig']
@@ -36,13 +39,15 @@ for i, marker in ipairs(Markers) do
 end
 
 for i = 1, 3 do
-	Iterators[i] = '([%a%s]+)' .. '(' .. Matchers[i] .. ';)'
+	Iterators[i] = '([%-%a%s]+)' .. '(' .. Matchers[i] .. ';)'
 end
 
-local strsplit = strsplit
-local tinsert = table.insert
-local tonumber = tonumber
-local GetItemInfo = GetItemInfo
+local GetItemInfo, tinsert, tonumber = GetItemInfo, tinsert, tonumber
+local adaptString(string)
+	if string then
+		return #string == 2 and string or ('0' .. string)
+	end
+end
 
 
 --[[ Search API ]]--
@@ -99,11 +104,11 @@ function ItemDB:GetItems(search, quality, class, subClass, slot, minLevel, maxLe
 
 	elseif minLevel or maxLevel then
 		local items = ''
-		local min = minLevel or -math.huge
-		local max = maxLevel or math.huge
+		local min = adaptString(minLevel) or '00'
+		local max = adaptString(maxLevel) or '99'
 
 		for section in (results or Ludwig_Data):gmatch('%d+' .. Matchers[5]) do
-			local level = tonumber(section:match('^(%d+)'))
+			local level = section:match('^(%d+)')
 			if level > min and level < max then
 				items = items .. section
 			end
@@ -143,8 +148,7 @@ end
 function ItemDB:GetItemNamedLike(search)
 	local search = '^' .. search:lower()
 	for id, name in self:IterateItems() do
-		local lName = name:lower()
-		if lName:match(search) then
+		if name:lower():match(search) then
 			return id, name
 		end
 	end
@@ -192,5 +196,5 @@ end
 
 function ItemDB:GetItemLink(id)
 	local name, hex = self:GetItemName(id)
-	return ('%s\124Hitem:%d:0:0:0:0:0:0:0:%d:0\124h[%s]\124h\124r'):format(hex, tonumber(id), UnitLevel('player'), name)
+	return ('%s\124Hitem:%s:0:0:0:0:0:0:0:%d:0\124h[%s]\124h\124r'):format(hex, id, UnitLevel('player'), name)
 end
