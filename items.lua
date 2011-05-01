@@ -43,7 +43,7 @@ for i = 1, 3 do
 end
 
 local GetItemInfo, tinsert, tonumber = GetItemInfo, tinsert, tonumber
-local adaptString(string)
+local function adaptString(string)
 	if string then
 		return #string == 2 and string or ('0' .. string)
 	end
