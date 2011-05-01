@@ -306,6 +306,11 @@ local function typeFilter_UpdateText(self)
 end
 
 local function typeFilter_OnClick(self, class, subClass)
+	--hack to hide the previous dropdown menu levels
+	for i = 1, UIDROPDOWNMENU_MENU_LEVEL - 1 do
+		_G['DropDownList'..i]:Hide()
+	end
+
 	local selectedClass, selectedSubClass, selectedSlot
 	
 	if class and subClass then
@@ -318,7 +323,7 @@ local function typeFilter_OnClick(self, class, subClass)
 	elseif self.value ~= ALL then
 		selectedClass = self.value
 	end
-	
+
 	UIDropDownMenu_SetSelectedValue(self.owner, self.value)
 	SearchFrame:SetSearchFilter('class', selectedClass)
 	SearchFrame:SetSearchFilter('subClass', selectedSubClass)
@@ -330,7 +335,7 @@ local selectedClass = nil
 local function typeFilter_Initialize(self, level)
 	local level = tonumber(level) or 1
 	if level == 1 then
-		self:addItem(level, ALL, ALL, ALL)
+		self:addItem(level, ALL, ALL)
 		for class, subClasses in Ludwig('ItemDB'):IterateClasses() do
 			local hasArrow = false
 			for subClass, slots in Ludwig('ItemDB'):IterateSubClasses(subClasses) do
