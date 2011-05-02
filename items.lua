@@ -3,6 +3,8 @@
 
 	Usage:
 		:GetItems(name, category, quality, minLevel, maxLevel)
+		
+		:GetItem(data, index)
 		:GetItemLink(id, name, color)
 		:GetQualityColor(quality)
 			
@@ -120,6 +122,10 @@ end
 
 
 --[[ Item API ]]--
+
+function ItemDB:GetItem(data, index)
+
+end
 
 function ItemDB:GetItemLink(id, name, hex)
 	return ('%s\124Hitem:%s:0:0:0:0:0:0:0:%d:0\124h[%s]\124h\124r'):format(hex, id, UnitLevel('player'), name)
