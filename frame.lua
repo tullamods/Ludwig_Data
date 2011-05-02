@@ -16,7 +16,7 @@ local DEFAULT_SEARCH_TEXT = _G['SEARCH']
 
 local function itemButton_OnEnter(self)
 	GameTooltip:SetOwner(self, 'ANCHOR_BOTTOMRIGHT')
-	GameTooltip:SetHyperlink(ItemDB:GetItemLink(self:GetID()))
+	--GameTooltip:SetHyperlink(ItemDB:GetItemLink(self:GetID()))
 	GameTooltip:Show()
 end
 
@@ -27,7 +27,7 @@ local function itemButton_OnLeave(self)
 end
 
 local function itemButton_OnClick(self, button)
-	HandleModifiedItemClick(ItemDB:GetItemLink(self:GetID()))
+	--HandleModifiedItemClick(ItemDB:GetItemLink(self:GetID()))
 end
 
 local function itemButton_Create(name, parent)
@@ -399,48 +399,57 @@ end
 
 --[[ Search Frame ]]--
 
-local searchResults = Search:GetItems()
-
-local function frame_UpdateList(self)
-	local numResults = #searchResults
+local ids, names, limits, numResults
+local function frame_UpdateList(self, update)
+	if not ids or update then
+		ids, names = Search:GetItems()
+		limits, numResults = {}, 0
+		
+		for quality = 0, Ludwig.MaxQualities do
+			numResults = numResults + #ids[quality]
+			limits[quality] = numResults
+		end
+	end
+	
+	for quality = 0, Ludwig.MaxQualities do
+		for i = 1, #ids do
+			local id = ids[quality][i]
+			local name = names[i]
+		end
+	end
+	
 	_G[self:GetName() .. 'Title']:SetText(L.FrameTitle:format(numResults))
 
 	local offset = FauxScrollFrame_GetOffset(_G[self:GetName() .. 'ScrollFrame']) or 0
 
 	for i = 1, ITEMS_TO_DISPLAY do
-		local index = offset + i
+		local index = i + offset
 		if index > numResults then
 			local button = rawget(self.itemButtons, i)
 			if button then
 				button:Hide()
 			end
 		else
+			local id, name
+			for quality = 0, Ludwig.MaxQualities do
+				local limit = limits[quality]
+				if limit >= index then
+					local i = index - (limits[quality - 1] or 0)
+					id, name = ids[quality][i], names[quality][i]
+					break
+				end
+			end
+			
 			local button = self.itemButtons[i]
-			local itemId = searchResults[index]
-			local name, hex = ItemDB:GetItemName(itemId)
+			local itemId = ids[index]
 
 			button.icon:SetTexture(GetItemIcon(itemId))
-			button:SetFormattedText('%s%s|r', hex, name)
-			button:SetID(itemId)
+			--button:SetFormattedText('%s%s|r', hex, name)
+			button:SetText(name)
+			button:SetID(id)
 			button:Show()
 		end
 	end
-	
-	-- if not self.seeker then
-		-- local id = offset
-		-- local f = CreateFrame('Frame', nil, self)
-		-- f:SetScript('OnUpdate', function(self, elapsed)
-			-- if (self.delay or 0) <= 0 then
-				-- self.delay = 1
-				-- for i = start + ITEMS_TO_DISPLAY + 1, numResults do
-					-- local name, hex = ItemDB:GetItemName(itemId)
-				-- end
-			-- else
-				-- self.delay = self.delay - elapsed
-			-- end
-		-- end)
-		-- self.seeker = f
-	-- end
 
 	FauxScrollFrame_Update(
 		_G[self:GetName() .. 'ScrollFrame'],
@@ -462,20 +471,18 @@ local function frame_OnUpdate(self, elapsed)
 		self.timer = self.timer - elapsed
 	else
 		self:SetScript('OnUpdate', nil)
-		searchResults = Search:GetItems()
-		frame_UpdateList(self)
+		frame_UpdateList(self, true)
 	end
 end
 
 local function frame_OnShow(self)
-	searchResults = Search:GetItems()
-	frame_UpdateList(self)
+	frame_UpdateList(self, true)
 	PlaySound('igCharacterInfoOpen')
 end
 
 local function frame_OnHide(self)
-	searchResults = nil
 	PlaySound('igCharacterInfoClose')
+	ids, names = nil
 end
 
 local function frame_Create(name, parent)
@@ -626,9 +633,13 @@ local function scheduleUpdate(self)
 	end
 end
 
-function SearchFrame:SetSearchFilter(index, value)
+function SearchFrame:SetSearchFilter(index, value, force)
 	if Search:SetFilter(index, value) then
-		scheduleUpdate(self)
+		if force then
+			self:UpdateList(true)
+		else
+			scheduleUpdate(self)
+		end
 	end
 end
 
@@ -661,9 +672,9 @@ function SearchFrame:ClearSearch()
 	end
 
 	--update the frame
-	scheduleUpdate(self)
+	self:UpdateList(true)
 end
 
-function SearchFrame:UpdateList()
-	frame_UpdateList(self.frame)
+function SearchFrame:UpdateList(force)
+	frame_UpdateList(self.frame, force)
 end

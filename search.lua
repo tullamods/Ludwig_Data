@@ -17,10 +17,8 @@ local filter = {
 function Search:GetItems()
 	return ItemDB:GetItems(
 		filter.name,
+		filter.class and {filter.class, filter.subClass, filter.slot},
 		filter.quality,
-		filter.class,
-		filter.subClass,
-		filter.slot,
 		filter.minLevel,
 		filter.maxLevel
 	)
