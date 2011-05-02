@@ -8,16 +8,15 @@
 		:GetItemLink(id, name, color)
 		:GetQualityColor(quality)
 			
-		:IterateClasses()
-		:IterateSubclasses(subclasses)
-		:IterateSlots(slots)
+		:IterateCategories(subs, level)
+		:HasSubCategories(subs, level)
 --]]
 
 local Markers, Matchers, Iterators = {'{', '}', '$', '€', '£'}, {}, {}
 local ItemDB = Ludwig:NewModule('ItemDB')
 
-for i, marker in ipairs(Markers) do
-	Matchers[i] = '([^'..marker..']+)'
+for 1, 4 do
+	Matchers[i] = '([^'.. Markers[i] ..']+)'
 end
 
 for i = 1, 3 do
@@ -106,21 +105,6 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 end
 
 
---[[ Categories API ]]--
-
-function ItemDB:IterateClasses()
-	return Ludwig_Classes:gmatch(Iterators[1])
-end
-
-function ItemDB:IterateSubClasses(subs)
-	return subs:gmatch(Iterators[2])
-end
-
-function ItemDB:IterateSlots(slots)
-	return slots:gmatch(Iterators[3])
-end
-
-
 --[[ Item API ]]--
 
 function ItemDB:GetItem(data, index)
@@ -133,4 +117,15 @@ end
 
 function ItemDB:GetQualityColor(quality)
 	return select(4, GetItemQualityColor(tonumber(quality)))
+end
+
+
+--[[ Categories API ]]--
+
+function ItemDB:IterateCategories(subs, level)
+	return (subs or Ludwig_Classes):gmatch(Iterators[level])
+end
+
+function ItemDB:HasSubCategories(subs, level)
+	return subs:gmatch('([%-%a%s]+)' .. Markers[level + 1])
 end
