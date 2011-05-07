@@ -23,11 +23,15 @@ for i = 1, 3 do
 end
 
 local GetItemInfo, tinsert, tonumber = GetItemInfo, tinsert, tonumber
+<<<<<<< HEAD
+local function adaptString(string)
+=======
 local LEVEL_MATCH = '(%d+)' .. Markers[4] .. Matchers[4]
 local QUALITY_MATCH = '(%d)' .. Markers[5] .. '$'
 local ITEM_MATCH = '(.-)(%d+);([^;]+)'
 
 local function buildNumber(string)
+>>>>>>> f59e05347ab53b6ddf592a9e4e351c849aeca8a9
 	if string then
 		return #string == 2 and string or ('0' .. string)
 	end
@@ -158,6 +162,13 @@ function ItemDB:IterateCategories(subs, level)
 	return (subs or Ludwig_Classes):gmatch(Iterators[level])
 end
 
+<<<<<<< HEAD
+function ItemDB:GetItemLink(id)
+	local name, hex = self:GetItemName(id)
+	return ('%s\124Hitem:%s:0:0:0:0:0:0:0:%d:0\124h[%s]\124h\124r'):format(hex, id, UnitLevel('player'), name)
+end
+=======
 function ItemDB:HasSubCategories(subs, level)
 	return subs:sub(1, 1) == Markers[level + 1]
 end
+>>>>>>> f59e05347ab53b6ddf592a9e4e351c849aeca8a9

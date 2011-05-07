@@ -8,5 +8,3 @@
 
 data.lua
 items.lua
-search.lua
-frame.lua
