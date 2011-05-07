@@ -52,7 +52,6 @@ end
 --[[ Search API ]]--
 
 function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
-	local TIME = GetTime()
 	local search = name and {strsplit(' ', name:lower())}
 	local ids, names, limits = buildCache(), buildCache(), {}
 	local data, list, numResults = Ludwig_Items, {}, 0
@@ -130,7 +129,6 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 		limits[i] = numResults
 	end
 	
-	print(GetTime() - TIME)
 	return {ids, names, limits}, numResults
 end
 
