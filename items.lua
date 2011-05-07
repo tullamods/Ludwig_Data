@@ -5,22 +5,21 @@
 		:GetItems(name, category, quality, minLevel, maxLevel)
 		
 		:GetItem(data, index)
-		:GetItemLink(id, name, color)
-		:GetQualityColor(quality)
+		:GetItemLink(id, name, quality)
 			
 		:IterateCategories(subs, level)
 		:HasSubCategories(subs, level)
 --]]
 
-local Markers, Matchers, Iterators = {'{', '}', '$', '€', '£'}, {}, {}
+local Markers, Matchers, Iterators, Cache = {'{', '}', '$', '€', '£'}, {}, {}, {}
 local ItemDB = Ludwig:NewModule('ItemDB')
 
-for 1, 4 do
-	Matchers[i] = '([^'.. Markers[i] ..']+)'
+for i = 1, 4 do
+	Matchers[i] = '([^'.. Markers[i] ..']*)'
 end
 
 for i = 1, 3 do
-	Iterators[i] = '([%-%a%s]+)' .. Markers[i] .. Matchers[i] .. ';'
+	Iterators[i] = Markers[i] .. '([%-%a%s&]+)' .. Matchers[i]
 end
 
 local GetItemInfo, tinsert, tonumber = GetItemInfo, tinsert, tonumber
@@ -34,15 +33,15 @@ local function buildNumber(string)
 	end
 end
 
-local function buildTable()
+local function buildCache()
 	local t = {}
-	for i = 0, Ludwig.MaxQualities do
+	for i = 0, #ITEM_QUALITY_COLORS do
 		t[tostring(i)] = {}
 	end
 	return t
 end
 
-local function improveTable(table)
+local function improveCache(table)
 	for i, v in pairs(table) do
 		table[tonumber(i)] = v
 	end
@@ -53,19 +52,22 @@ end
 --[[ Search API ]]--
 
 function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
+	local TIME = GetTime()
 	local search = name and {strsplit(' ', name:lower())}
-	local ids, names = buildTable(), buildTable()
-	local data = Ludwig_Items
+	local ids, names, limits = buildCache(), buildCache(), {}
+	local data, list, numResults = Ludwig_Items, {}, 0
 	
+	-- Category
 	if category then
 		local match = ''
 		for i, value in ipairs(category) do
-			match = match .. '.*' .. value .. Marker[1]
+			match = match .. '.-' .. value .. Markers[i]
 		end
 		
 		data = data:match(match .. Matchers[#category])
 	end
 
+	-- Level
 	if minLevel or maxLevel then
 		local min = buildNumber(minLevel) or '00'
 		local max = buildNumber(maxLevel) or '99'
@@ -76,47 +78,77 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 				level = '0' .. level
 			end
 		
-			if level > min and level < max then
-				results = results .. ';' .. items
+			if level >= min and level <= max then
+				tinsert(list, items)
 			end
 		end
-		
-		data = results
+	else
+		tinsert(list, data)
 	end
 	
-	for extra, id, name in data:gmatch(ITEM_MATCH) do
-		local qual = extra:match(QUALITY_MATCH)
-		if qual then
-			if not quality or qual == quality then
-				qualityNames = names[qual]
-				qualityIDs = ids[qual]
-			else
-				qualityIDs = nil
+	-- Name/Quality
+	for _, items in ipairs(list) do
+		for extra, id, name in items:gmatch(ITEM_MATCH) do
+			local qual = extra:match(QUALITY_MATCH)
+			if qual then
+				if not quality or qual == quality then
+					qualityNames = names[qual]
+					qualityIDs = ids[qual]
+				else
+					qualityIDs = nil
+				end
+			end
+			
+			if qualityIDs then
+				local match = true
+				
+				if search then
+					local name = name:lower()
+		
+					for i, word in ipairs(search) do
+						if not name:match(word) then
+							match = nil
+							break
+						end
+					end
+				end
+
+				if match then
+					tinsert(qualityIDs, id)
+					tinsert(qualityNames, name)
+				end
 			end
 		end
-		
-		if qualityIDs then
-			tinsert(qualityIDs, id)
-			tinsert(qualityNames, name)
-		end
 	end
-
-	return improveTable(ids), improveTable(names)
+	
+	-- Calculations
+	improveCache(ids)
+	improveCache(names)
+	
+	for i = 0, #ITEM_QUALITY_COLORS do
+		numResults = numResults + #ids[i]
+		limits[i] = numResults
+	end
+	
+	print(GetTime() - TIME)
+	return {ids, names, limits}, numResults
 end
 
 
 --[[ Item API ]]--
 
 function ItemDB:GetItem(data, index)
-
+	local ids, names, limits = unpack(data)
+	for i = 0, #ITEM_QUALITY_COLORS do
+		if limits[i] >= index then
+			index = index - (limits[i - 1] or 0)
+			return ids[i][index], names[i][index], ITEM_QUALITY_COLORS[i].hex
+		end
+	end
 end
 
 function ItemDB:GetItemLink(id, name, hex)
 	return ('%s\124Hitem:%s:0:0:0:0:0:0:0:%d:0\124h[%s]\124h\124r'):format(hex, id, UnitLevel('player'), name)
-end
-
-function ItemDB:GetQualityColor(quality)
-	return select(4, GetItemQualityColor(tonumber(quality)))
 end
 
 
@@ -127,5 +159,5 @@ function ItemDB:IterateCategories(subs, level)
 end
 
 function ItemDB:HasSubCategories(subs, level)
-	return subs:gmatch('([%-%a%s]+)' .. Markers[level + 1])
+	return subs:sub(1, 1) == Markers[level + 1]
 end
