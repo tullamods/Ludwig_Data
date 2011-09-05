@@ -16,7 +16,6 @@ local ItemDB = Ludwig:NewModule('ItemDB')
 
 for i = 1, 4 do
 	Matchers[i] = '([^'.. Markers[i] ..']*)'
-  print(Matchers[i])
 end
 
 for i = 1, 3 do
@@ -64,8 +63,7 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 			match = match .. '.-' .. value .. Markers[i]
 		end
 		
-    print(match .. Matchers[#category])
-		--data = data:match(match .. Matchers[#category])
+		data = data:match(match .. Matchers[#category])
 	end
 
 	-- Level
