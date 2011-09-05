@@ -1,8 +1,10 @@
-## Interface: 40100
-## Title: Ludwig Data
+## Interface: 40200
+## Title: |cff20ff20Ludwig Data|r
 ## Author: Tuller & Jaliborc (João Libório)
 ## Notes: Load on demand database for Ludwig
+
 ## Dependencies: Ludwig
 ## LoadOnDemand: 1
+
 data.lua
 items.lua
