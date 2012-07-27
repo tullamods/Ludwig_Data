@@ -1,14 +1,16 @@
-﻿import urllib2, re, time
+# -*- coding: utf-8 -*-
+import requests, re, time
 
 # Localizations
-TargetFile = '/Users/Jaliborc/Addons/LudwigItems.lua'
+TargetFile = '/Users/Jaliborc/Applications/World of Warcraft/Release/Interface/AddOns/Ludwig_Data/new data.lua'
 ItemSearchURL = 'http://www.wowhead.com/items?filter=cr=151:151;crs=4:1;crv='
 ClassSearchURL = 'http://static.wowhead.com/js/locale_enus.js?1241'
+ItemSearchURL = 'http://mop.wowhead.com/items?filter=cr=151:151;crs=4:1;crv='
 
 # Values
 Markers = {1:'{', 2:'}', 3:'$', 4:'€', 5:'£'}
 NumQualities = 7
-MaxItems = 80000
+MaxItems = 90000
 MinItems = 0
 ItemBump = 50
 Verbose = None
@@ -54,8 +56,8 @@ for value in range(MinItems, MaxItems, ItemBump):
     print('Searching from ' + lower + ' to ' + upper)
     
     url = ItemSearchURL + upper + ':' + lower
-    page = urllib2.urlopen(url)
-    source = page.read()
+    page = requests.get(url)
+    source = page.text
     
     for match in re.finditer('"classs".*?cost', source):
         full = match.group(0)
@@ -84,8 +86,8 @@ for value in range(MinItems, MaxItems, ItemBump):
 # Browse Categories
 print('')
 print('Browsing Category Names...')
-page = urllib2.urlopen(ClassSearchURL)
-source = re.search('var mn_items=(.*?);var', page.read()).group(1)
+page = requests.get(ClassSearchURL)
+source = re.search('var mn_items=(.*?);var', page.text).group(1)
 ids = [None, 0, 0, 0]
 level = 0
 
