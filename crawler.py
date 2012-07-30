@@ -24,6 +24,18 @@ items = '[['
 classes = '[['
 
 
+# Request Methods
+def GetWebPage(url):
+	while True:
+		page = requests.get(url)
+		
+		try:
+			text = page.read
+			return text
+		except:
+			print('Error retrieving page, repeating')
+			continue
+
 # Cache Methods
 def SetTable(table, index):
     table[index] = table.get(index) or {}
@@ -46,7 +58,9 @@ def GetNumber(key, text):
 
 
 # Browse Items
-for value in range(MinItems, MaxItems, ItemBump):
+value = MinItems
+
+while value < MaxItems:
     upper = str(value + ItemBump - 1)
     lower = str(value)
 
@@ -54,10 +68,7 @@ for value in range(MinItems, MaxItems, ItemBump):
         print('')
         
     print('Searching from ' + lower + ' to ' + upper)
-    
-    url = ItemSearchURL + upper + ':' + lower
-    page = requests.get(url)
-    source = page.text
+    source = GetWebPage(ItemSearchURL + upper + ':' + lower)
     
     for match in re.finditer('"classs".*?cost', source):
         full = match.group(0)
@@ -82,12 +93,14 @@ for value in range(MinItems, MaxItems, ItemBump):
         SetTable(Cache[itemClass][subClass], slot)
         AddItem(Cache[itemClass][subClass][slot], quality, level, itemData)
 
+    value += ItemBump
+
 
 # Browse Categories
 print('')
 print('Browsing Category Names...')
-page = requests.get(ClassSearchURL)
-source = re.search('var mn_items=(.*?);var', page.text).group(1)
+source = GetWebPage(ClassSearchURL)
+source = re.search('var mn_items=(.*?);var', source).group(1)
 ids = [None, 0, 0, 0]
 level = 0
 
@@ -135,12 +148,12 @@ def ExtractValue(table, level, marker, i):
     
     if value and not value == None:
         if not type(i) == String:
-            items = items + str(i) + marker
+            items += str(i) + marker
 
         if type(value) == Dir:
             Extract(value, level)
         else:
-            items = items + value
+            items += value.encode("utf-8")
 
 def Extract(table, level):
     marker = Markers[level]
@@ -157,13 +170,14 @@ def Extract(table, level):
         if not done.get(i):
             ExtractValue(table, level, marker, i)
 
+print('')
 print('Extracting Cache...')
 Extract(Cache, 1)
 
 
 # Write the File
 f = open(TargetFile, 'w')
-f.write('Ludwig_Classes=' + classes + ']]\n\nLudwig_Items='+ items +']]')
+f.write('Ludwig_Classes=' + classes.encode("utf-8") + ']]\n\nLudwig_Items='+ items + ']]')
 f.close()
 
 took = time.time() - Start
