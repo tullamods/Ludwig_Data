@@ -5,12 +5,11 @@ import requests, re, time
 TargetFile = '/Users/Jaliborc/Applications/World of Warcraft/Release/Interface/AddOns/Ludwig_Data/new data.lua'
 ItemSearchURL = 'http://www.wowhead.com/items?filter=cr=151:151;crs=4:1;crv='
 ClassSearchURL = 'http://static.wowhead.com/js/locale_enus.js?1241'
-ItemSearchURL = 'http://mop.wowhead.com/items?filter=cr=151:151;crs=4:1;crv='
 
 # Values
 Markers = {1:'{', 2:'}', 3:'$', 4:'€', 5:'£'}
 NumQualities = 7
-MaxItems = 90000
+MaxItems = 95000
 MinItems = 0
 ItemBump = 50
 Verbose = None
@@ -30,7 +29,7 @@ def GetWebPage(url):
 		page = requests.get(url)
 		
 		try:
-			text = page.read
+			text = page.text
 			return text
 		except:
 			print('Error retrieving page, repeating')
@@ -100,7 +99,7 @@ while value < MaxItems:
 print('')
 print('Browsing Category Names...')
 source = GetWebPage(ClassSearchURL)
-source = re.search('var mn_items=(.*?);var', source).group(1)
+source = re.search('var mn_items=(.*?);\s+var', source, re.DOTALL).group(1)
 ids = [None, 0, 0, 0]
 level = 0
 
@@ -109,7 +108,7 @@ for match in re.finditer('\[([^\[]*)', source):
     level = level + 1
 
     if level < 7:
-        classs = re.search('^(-*\d+),"([^"]+)"', section)
+        classs = re.search('^(-*\d+),\s+"([^"]+)"', section)
 
         if classs:
             classID = classs.group(1)
