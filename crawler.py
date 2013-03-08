@@ -2,7 +2,7 @@
 import requests, re, time
 
 # Localizations
-TargetFile = '/Users/Jaliborc/Applications/World of Warcraft/Release/Interface/AddOns/Ludwig_Data/new data.lua'
+TargetFile = 'new data.lua'
 ItemSearchURL = 'http://www.wowhead.com/items?filter=cr=151:151;crs=4:1;crv='
 ClassSearchURL = 'http://static.wowhead.com/js/locale_enus.js?1241'
 
