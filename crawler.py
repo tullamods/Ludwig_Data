@@ -9,7 +9,7 @@ ClassSearchURL = 'http://static.wowhead.com/js/locale_enus.js?1241'
 # Values
 Markers = {1:'{', 2:'}', 3:'$', 4:'€', 5:'£'}
 NumQualities = 7
-MaxItems = 95000
+MaxItems = 100000
 MinItems = 0
 ItemBump = 50
 Verbose = None
