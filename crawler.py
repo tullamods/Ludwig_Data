@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-import requests, re, time
+import re, time
+from api import *
 
 # Localizations
-TargetFile = 'new data.lua'
+TargetFile = 'new_data.lua'
 ItemSearchURL = 'http://www.wowhead.com/items?filter=cr=151:151;crs=4:1;crv='
 ClassSearchURL = 'http://static.wowhead.com/js/locale_enus.js?1241'
 
 # Values
 Markers = {1:'{', 2:'}', 3:'$', 4:'€', 5:'£'}
 NumQualities = 7
-MaxItems = 100000
+MaxItems = 115000
 MinItems = 0
 ItemBump = 50
 Verbose = None
@@ -19,45 +20,11 @@ Start = time.time()
 Cache = {}
 Dir = type(Cache)
 String = type('')
-items = '[['
-classes = '[['
-
-
-# Request Methods
-def GetWebPage(url):
-	while True:
-		page = requests.get(url)
-		
-		try:
-			text = page.text
-			return text
-		except:
-			print('Error retrieving page, repeating')
-			continue
-
-# Cache Methods
-def SetTable(table, index):
-    table[index] = table.get(index) or {}
-
-def AddItem(table, quality, level, item):
-    table[level] = table.get(level) or {}
-    level = table[level]
-    
-    old = level.get(quality) or ''
-    level[quality] = old + item
-
-# Item Matching Methods
-def GetValue(key, kind, text):
-    match = re.search(key + '":' + kind, text)
-    if match:
-        return match.group(1)
-
-def GetNumber(key, text):
-    return GetValue(key, '(-*\d+)', text)
-
 
 # Browse Items
 value = MinItems
+numItems = 0
+items = ''
 
 while value < MaxItems:
     upper = str(value + ItemBump - 1)
@@ -68,9 +35,11 @@ while value < MaxItems:
         
     print('Searching from ' + lower + ' to ' + upper)
     source = GetWebPage(ItemSearchURL + upper + ':' + lower)
+    newItems = 0
     
     for match in re.finditer('"classs".*?cost', source):
         full = match.group(0)
+        newItems += 1
 
         itemID = GetNumber('"id', full)
         name = re.sub('\\\\', '', GetValue('name', '"\d(.+?[^\\\])"', full))
@@ -93,51 +62,34 @@ while value < MaxItems:
         AddItem(Cache[itemClass][subClass][slot], quality, level, itemData)
 
     value += ItemBump
+    numItems += newItems
+    print('Found ' + str(newItems) + ' items (' + str(numItems) + ' total)')
 
 
 # Browse Categories
 print('')
-print('Browsing Category Names...')
-source = GetWebPage(ClassSearchURL)
-source = re.search('var mn_items=(.*?);\s+var', source, re.DOTALL).group(1)
 ids = [None, 0, 0, 0]
-level = 0
+classes = ''
 
-for match in re.finditer('\[([^\[]*)', source):
-    section = match.group(1)
-    level = level + 1
+for c in GetClasses(ClassSearchURL):
+    parentCache = Cache
 
-    if level < 7:
-        classs = re.search('^(-*\d+),\s+"([^"]+)"', section)
+    for i in range(1, c['level']):
+        parentCache = parentCache.get(ids[i])
 
-        if classs:
-            classID = classs.group(1)
-            className = classs.group(2)
-            classLevel = level / 2
+        if not parentCache:
+            break
 
-            if Verbose:
-                print(className, classID, classLevel)
+    for i in range(c['level'] + 1, 4):
+        ids[i] = 0
 
-            parentCache = Cache
-            
-            for i in range(1, classLevel):
-                parentCache = parentCache.get(ids[i])
-
-                if not parentCache:
-                    break
-
-            for i in range(classLevel + 1, 4):
-                ids[i] = 0
-
-            if parentCache and parentCache.get(classID):
-                newID = ids[classLevel] + 1
-                ids[classLevel] = newID
-                
-                classes = classes + Markers[classLevel] + className
-                parentCache[newID] = parentCache[classID]
-                parentCache[classID] = None
-
-    level = level - len(re.findall('\]', section))
+    if parentCache and parentCache.get(c['id']):
+        newID = ids[c['level']] + 1
+        ids[c['level']] = newID
+        
+        classes = classes + Markers[c['level']] + c['name']
+        parentCache[newID] = parentCache[c['id']]
+        parentCache[c['id']] = None
 
 
 # Extract Cache
@@ -176,7 +128,7 @@ Extract(Cache, 1)
 
 # Write the File
 f = open(TargetFile, 'w')
-f.write('Ludwig_Classes=' + classes.encode("utf-8") + ']]\n\nLudwig_Items='+ items + ']]')
+f.write('Ludwig_Classes="' + classes.encode("utf-8") + '"\nLudwig_Items=[['+ items + ']]')
 f.close()
 
 took = time.time() - Start
