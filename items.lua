@@ -146,7 +146,7 @@ function ItemDB:GetItem(data, index)
 end
 
 function ItemDB:GetItemLink(id, name, hex)
-	return ('%s\124Hitem:%s:0:0:0:0:0:0:0:%d:0\124h[%s]\124h\124r'):format(hex, id, UnitLevel('player'), name)
+	return ('%s|Hitem:%d:0:0:0:0:0:0:0:0:0:0|h[%s]|h|r'):format(hex, id, name)
 end
 
 
