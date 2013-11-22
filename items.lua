@@ -132,6 +132,25 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 	return {ids, names, limits}, numResults
 end
 
+function ItemDB:GetClosestItem(search)
+	local size = #search
+	local search = '^' .. search
+	local distance = math.huge
+	local bestID, bestName
+
+	for _, id, name in Ludwig_Items:gmatch(ITEM_MATCH) do
+		if name:match(search) then
+			local off = #name - size
+			if off > 0 and off < distance then
+				bestID, bestName = id, name
+				distance = off
+			end
+		end
+	end
+
+	return bestID, bestName
+end
+
 
 --[[ Item API ]]--
 
