@@ -136,19 +136,21 @@ function ItemDB:GetClosestItem(search)
 	local size = #search
 	local search = '^' .. search
 	local distance = math.huge
-	local bestID, bestName
+	local bestID, bestName, bestQuality
 
-	for _, id, name in Ludwig_Items:gmatch(ITEM_MATCH) do
+	for extra, id, name in Ludwig_Items:gmatch(ITEM_MATCH) do
+		quality = extra:match(QUALITY_MATCH) or quality
+
 		if name:match(search) then
 			local off = #name - size
-			if off > 0 and off < distance then
-				bestID, bestName = id, name
+			if off >= 0 and off < distance then
+				bestID, bestName, bestQuality = id, name, quality
 				distance = off
 			end
 		end
 	end
 
-	return bestID, bestName
+	return bestID, bestName, tonumber(bestQuality)
 end
 
 
@@ -159,13 +161,13 @@ function ItemDB:GetItem(data, index)
 	for i = 0, #ITEM_QUALITY_COLORS do
 		if limits[i] >= index then
 			index = index - (limits[i - 1] or 0)
-			return ids[i][index], names[i][index], ITEM_QUALITY_COLORS[i].hex
+			return ids[i][index], names[i][index], i
 		end
 	end
 end
 
-function ItemDB:GetItemLink(id, name, hex)
-	return ('%s|Hitem:%d:0:0:0:0:0:0:0:0:0:0|h[%s]|h|r'):format(hex, id, name)
+function ItemDB:GetItemLink(id, name, quality)
+	return ('%s|Hitem:%d:0:0:0:0:0:0:0:0:0:0|h[%s]|h|r'):format(ITEM_QUALITY_COLORS[quality].hex, id, name)
 end
 
 
