@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-import requests, re
+import requests, re, files
 
 Markers = {1:'¤', 2:'¢', 3:'€', 4:'£', 5:'฿'}
-Alphabet = [chr(i) for i in xrange(0, 127)]
+Alphabet = [chr(i) for i in xrange(0, 127) if i != 93]
 NumQualities = 7
 
 # Web
@@ -10,7 +10,7 @@ def GetItems(url, pages):
     items = []
 
     for i, page in enumerate(pages[:-1]):
-        source = GetWebPage(url + str(pages[i+1] - 1) + ':' + str(page))
+        source = files.Browse(url + str(pages[i+1] - 1) + ':' + str(page))
         matches = re.findall('"classs".*?cost', source)
         print('Found ' + str(len(matches)) + ' items')
 
@@ -29,7 +29,7 @@ def GetItems(url, pages):
     return items
 
 def GetClasses(url):
-    source = GetWebPage(url)
+    source = files.Browse(url)
     data = re.search('var mn_items=(.*?);\s*var', source, re.DOTALL).group(1)
     classes = []
     level = 0
@@ -51,18 +51,6 @@ def GetClasses(url):
     
     print('Found ' + str(len(classes)) + ' item classes')
     return classes
-        
-def GetWebPage(url):
-    print('Retrieving ' + url)
-    while True:
-		page = requests.get(url)
-		
-		try:
-			text = page.text
-			return text
-		except:
-			print('Error retrieving page, repeating')
-			continue
 
 def GetNumber(key, text):
     return GetValue(key, '(-*\d+)', text) or 0
@@ -111,7 +99,6 @@ def GenerateClassIDs(classes, items):
             ids[i] = 0
     
         if table and table.get(c['id']):
-            print(c['name'], table[c['id']])
             record += Markers[c['level']] + c['name']
             ids[c['level']] += 1            
             
