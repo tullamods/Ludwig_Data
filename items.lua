@@ -11,19 +11,10 @@
 		:HasSubCategories(subs, level)
 --]]
 
-local Markers, Matchers, Iterators, Cache = {'¤', '¢', '€', '£', '฿'}, {}, {}, {}
+local Markers, Cache = {'¤', '¢', '€', '£', '฿'}, {}
 local ItemDB = Ludwig:NewModule('ItemDB')
 
-for i = 1, 4 do
-	Matchers[i] = '([^'.. Markers[i] ..']*)'
-end
-
-for i = 1, 3 do
-	Iterators[i] = Markers[i] .. '([%-%a%s&]+)' .. Matchers[i]
-end
-
-local GetItemInfo, tinsert, tonumber = GetItemInfo, tinsert, tonumber
-local LEVEL_MATCH = '(.)' .. Markers[4] .. Matchers[4]
+local LEVEL_MATCH = '(.)' .. Markers[4] .. '(.-)' .. Markers[4]
 local QUALITY_MATCH = '(.)' .. Markers[5] .. '$'
 local ITEM_MATCH = '(.-)_(...)([^_^]+)'
 
@@ -63,7 +54,7 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 	local search = name and {strsplit(' ', name:lower())}
 	local ids, names, limits = newCache(), newCache(), {}
 	local data, list, numResults = Ludwig_Items, {}, 0
-	
+
 	-- Category
 	if category then
 		local match = ''
@@ -71,7 +62,7 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 			match = match .. '.-' .. strchar(value) .. Markers[i]
 		end
 		
-		data = data:match(match .. Matchers[#category])
+		data = data:match(match .. '(.-)' .. Markers[#category])
 	end
 
 	-- Level
@@ -81,7 +72,7 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 		local results = ''
 		
 		for level, items in data:gmatch(LEVEL_MATCH) do
-			if level >= min and level <= max then
+			if level >= minLevel and level <= maxLevel then
 				tinsert(list, items)
 			end
 		end
@@ -172,15 +163,4 @@ end
 
 function ItemDB:GetItemLink(id, name, quality)
 	return ('%s|Hitem:%d:0:0:0:0:0:0:0:0:0:0|h[%s]|h|r'):format(ITEM_QUALITY_COLORS[quality].hex, id, name)
-end
-
-
---[[ Categories ]]--
-
-function ItemDB:IterateCategories(subs, level)
-	return (subs or Ludwig_Classes):gmatch(Iterators[level])
-end
-
-function ItemDB:HasSubCategories(subs, level)
-	return subs:sub(1, 1) == Markers[level + 1]
 end

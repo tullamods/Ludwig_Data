@@ -22,8 +22,8 @@ def GetItems(url, pages):
                 'slot': GetNumber('slot', match),
 
                 'name': re.sub('\\\\', '', GetValue('name', '"\d(.+?[^\\\])"', match)),
-                'quality': NumQualities - int(GetValue('name', '["\'](\d)', match)),
-                'level': int(GetNumber('reqlevel', match))
+                'quality': int(GetValue('name', '["\'](\d)', match)),
+                'level': int(GetNumber('reqlevel', match) or 0)
             }]
 
     return items
@@ -53,7 +53,7 @@ def GetClasses(url):
     return classes
 
 def GetNumber(key, text):
-    return GetValue(key, '(-*\d+)', text) or 0
+    return GetValue(key, '(-*\d+)', text)
 
 def GetValue(key, kind, text):
     match = re.search(key + '":' + kind, text)
@@ -66,16 +66,20 @@ def Hierarchize(items):
     table = {}
     
     for item in items:   
-        SetTable(table, item['class'])
-        SetTable(table[item['class']], item['subclass'])
-        SetTable(table[item['class']][item['subclass']], item['slot'])
-        SetTable(table[item['class']][item['subclass']][item['slot']], item['level'])
-        AddItem(table[item['class']][item['subclass']][item['slot']][item['level']], item['quality'], CompressInt(item['id'], 3) + item['name'])
+        AddItem(SetTable(SetTable(SetTable(SetTable(table,
+            item['class']),
+                item['subclass']),
+                    item['slot']),
+                        item['level']),
+                            NumQualities - item['quality'],
+                                CompressInt(item['id'], 3) + item['name'])
         
     return table
 
 def SetTable(table, index):
-    table[index] = table.get(index) or {}
+    index = index or 'None'
+    table.setdefault(index, {})
+    return table[index]
 
 def AddItem(table, quality, item):
     table.setdefault(quality, '')
@@ -85,6 +89,7 @@ def AddItem(table, quality, item):
 # Class IDs
 def GenerateClassIDs(classes, items):
     ids = [None, 0, 0, 0]
+    lastLevel = 0
     record = ''
 
     for c in classes:
@@ -99,25 +104,30 @@ def GenerateClassIDs(classes, items):
             ids[i] = 0
     
         if table and table.get(c['id']):
-            record += Markers[c['level']] + c['name']
-            ids[c['level']] += 1            
+            off = c['level'] - lastLevel
+            record += ',{' * off
+            record += '}}' * (-off)
+            record += off <= 0 and '},' or ''
+            record += '{"' + c['name'] + '"'
+            lastLevel = c['level']
             
+            ids[c['level']] += 1            
             table[ids[c['level']]] = table[c['id']]
             del table[c['id']]
             
-    return record
+    return record[1:] + '}}' * lastLevel
   
   
 # Formatting
 def Format(table, level):
-    keys = set(range(len(Alphabet)) + table.keys())
+    keys = set(['None'] + range(len(Alphabet)) + table.keys())
     level += 1
     items = ''
 
     for i in keys:
         value = table.get(i)        
         if value:
-            items += isinstance(i, int) and i > 0 and (Alphabet[i] + Markers[level]) or ''
+            items += isinstance(i, int) and i >= 0 and (Alphabet[i] + Markers[level]) or ''
             items += FormatValue(value, level)
         
     return items
