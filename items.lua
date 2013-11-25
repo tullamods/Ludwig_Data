@@ -11,7 +11,7 @@
 		:HasSubCategories(subs, level)
 --]]
 
-local Markers, Matchers, Iterators, Cache = {'{', '}', '$', '€', '£'}, {}, {}, {}
+local Markers, Matchers, Iterators, Cache = {'¤', '¢', '€', '£', '฿'}, {}, {}, {}
 local ItemDB = Ludwig:NewModule('ItemDB')
 
 for i = 1, 4 do
@@ -23,44 +23,52 @@ for i = 1, 3 do
 end
 
 local GetItemInfo, tinsert, tonumber = GetItemInfo, tinsert, tonumber
-local LEVEL_MATCH = '(%d+)' .. Markers[4] .. Matchers[4]
-local QUALITY_MATCH = '(%d)' .. Markers[5] .. '$'
-local ITEM_MATCH = '(.-)(%d+);([^;]+)'
+local LEVEL_MATCH = '(.)' .. Markers[4] .. Matchers[4]
+local QUALITY_MATCH = '(.)' .. Markers[5] .. '$'
+local ITEM_MATCH = '(.-)_(...)([^_^]+)'
 
-local function buildNumber(string)
-	if string then
-		return #string == 2 and string or ('0' .. string)
-	end
-end
-
-local function buildCache()
+local function newCache()
 	local t = {}
 	for i = 0, #ITEM_QUALITY_COLORS do
-		t[tostring(i)] = {}
+		t[strchar(i)] = {}
 	end
 	return t
 end
 
 local function improveCache(table)
 	for i, v in pairs(table) do
-		table[tonumber(i)] = v
+		table[strbyte(i)] = v
 	end
 	return table
 end
 
+local function strint(s)
+	local v, d = 0
+	for i = 1, #s do
+		d = strbyte(s, i)
+		if d > 90 then
+			d = d - 5
+		end
 
---[[ Search API ]]--
+		v = v + d * 122 ^ (#s - i)
+	end
+	return v
+end
+
+
+--[[ Searches ]]--
 
 function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
+	local quality = quality and strchar(quality)
 	local search = name and {strsplit(' ', name:lower())}
-	local ids, names, limits = buildCache(), buildCache(), {}
+	local ids, names, limits = newCache(), newCache(), {}
 	local data, list, numResults = Ludwig_Items, {}, 0
 	
 	-- Category
 	if category then
 		local match = ''
 		for i, value in ipairs(category) do
-			match = match .. '.-' .. value .. Markers[i]
+			match = match .. '.-' .. strchar(value) .. Markers[i]
 		end
 		
 		data = data:match(match .. Matchers[#category])
@@ -68,15 +76,11 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 
 	-- Level
 	if minLevel or maxLevel then
-		local min = buildNumber(minLevel) or '00'
-		local max = buildNumber(maxLevel) or '99'
+		local minLevel = strchar(minLevel or 0)
+		local maxLevel = strchar(maxLevel or 126)
 		local results = ''
 		
 		for level, items in data:gmatch(LEVEL_MATCH) do
-			if #level == 1 then
-				level = '0' .. level
-			end
-		
 			if level >= min and level <= max then
 				tinsert(list, items)
 			end
@@ -88,11 +92,11 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 	-- Name/Quality
 	for _, items in ipairs(list) do
 		for extra, id, name in items:gmatch(ITEM_MATCH) do
-			local qual = extra:match(QUALITY_MATCH)
-			if qual then
-				if not quality or qual == quality then
-					qualityNames = names[qual]
-					qualityIDs = ids[qual]
+			local q = extra:match(QUALITY_MATCH)
+			if q then
+				if not quality or q == quality then
+					qualityNames = names[q]
+					qualityIDs = ids[q]
 				else
 					qualityIDs = nil
 				end
@@ -150,18 +154,18 @@ function ItemDB:GetClosestItem(search)
 		end
 	end
 
-	return bestID, bestName, tonumber(bestQuality)
+	return strint(bestID), bestName, strbyte(bestQuality)
 end
 
 
---[[ Item API ]]--
+--[[ Items ]]--
 
 function ItemDB:GetItem(data, index)
 	local ids, names, limits = unpack(data)
-	for i = 0, #ITEM_QUALITY_COLORS do
-		if limits[i] >= index then
-			index = index - (limits[i - 1] or 0)
-			return ids[i][index], names[i][index], i
+	for q = 0, #ITEM_QUALITY_COLORS do
+		if limits[q] >= index then
+			index = index - (limits[q - 1] or 0)
+			return strint(ids[q][index]), names[q][index], q
 		end
 	end
 end
@@ -171,7 +175,7 @@ function ItemDB:GetItemLink(id, name, quality)
 end
 
 
---[[ Categories API ]]--
+--[[ Categories ]]--
 
 function ItemDB:IterateCategories(subs, level)
 	return (subs or Ludwig_Classes):gmatch(Iterators[level])

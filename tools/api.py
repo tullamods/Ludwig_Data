@@ -2,7 +2,7 @@
 import requests, re, files
 
 Markers = {1:'¤', 2:'¢', 3:'€', 4:'£', 5:'฿'}
-Alphabet = [chr(i) for i in xrange(0, 127) if i != 93]
+Alphabet = [chr(i) for i in xrange(0, 127) if i < 91 or i > 95]
 NumQualities = 7
 
 # Web
@@ -70,7 +70,7 @@ def Hierarchize(items):
         SetTable(table[item['class']], item['subclass'])
         SetTable(table[item['class']][item['subclass']], item['slot'])
         SetTable(table[item['class']][item['subclass']][item['slot']], item['level'])
-        AddItem(table[item['class']][item['subclass']][item['slot']][item['level']], item['quality'], CompressInt(item['id'], 3) + item['name'] + ';')
+        AddItem(table[item['class']][item['subclass']][item['slot']][item['level']], item['quality'], CompressInt(item['id'], 3) + item['name'])
         
     return table
 
@@ -79,7 +79,7 @@ def SetTable(table, index):
 
 def AddItem(table, quality, item):
     table.setdefault(quality, '')
-    table[quality] += item
+    table[quality] += '_' + item
     
     
 # Class IDs
@@ -126,9 +126,7 @@ def FormatValue(value, level):
     if isinstance(value, dict):
         return Format(value, level)
     elif isinstance(value, basestring):
-        return value
-    else:
-        return ''
+        return value + '^'
 
 def CompressInt(v, size = 1):
     v = int(v)
