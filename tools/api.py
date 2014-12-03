@@ -1,78 +1,87 @@
 # -*- coding: utf-8 -*-
-import requests, re, files
+import re, json, joblib, multiprocessing
+from joblib import Parallel, delayed  
+import files
 
 Markers = {1:'¤', 2:'¢', 3:'€', 4:'£', 5:'฿'}
 Alphabet = [chr(i) for i in xrange(0, 127) if i < 91 or i > 95]
 NumQualities = 7
 
 # Web
-def GetItems(url, pages):
+def GetItems(url, low, high, step):
     items = []
 
-    for i, page in enumerate(pages[:-1]):
-        source = files.Browse(url + str(pages[i+1] - 1) + ':' + str(page))
-        matches = re.findall('"classs".*?cost', source)
+    while low < high:
+        source = files.Browse(url + str(low) + ':' + str(low + step - 1))
+        matches = GetJson('listviewitems = ([^;]+);', source) or []
+        items += matches
+        low += step
+        
         print('Found ' + str(len(matches)) + ' items')
-
-        for match in matches:
-            items += [{
-                'id': GetNumber('"id', match),
-                'class': GetNumber('classs', match),
-                'subclass': GetNumber('subclass', match),
-                'slot': GetNumber('slot', match),
-
-                'name': re.sub('\\\\', '', GetValue('name', '"\d(.+?[^\\\])"', match)),
-                'quality': int(GetValue('name', '["\'](\d)', match)),
-                'level': int(GetNumber('reqlevel', match) or 0)
-            }]
-
+    
+    print('Found a total of ' + str(len(items)) + ' items')
     return items
 
-def GetClasses(url):
-    source = files.Browse(url)
-    data = re.search('var mn_items=(.*?);\s*var', source, re.DOTALL).group(1)
-    classes = []
-    level = 0
-   
-    for match in re.finditer('\[([^\[]*)', data):
-        section = match.group(1)
-        level = level + 1
+def GetClasses(url, low, high):
+    classes = {}
+
+    if url.find('|') !=- 1:
+        [url, rest] = url.split('|', 1)
+    else:
+        rest = None
     
-        if level < 7:
-            classs = re.search('^(-*\d+),\s*"([^"]+)"', section)
-            if classs:
-                classes += [{
-                    'id': classs.group(1),
-                    'name': classs.group(2),
-                    'level': level / 2
-                }]
-                
-        level = level - len(re.findall('\]', section))
+    for i in xrange(low, high):
+        page = url.format(str(i))
+        text = files.Browse(page)
+        title = GetTitle(text)     
+        if title:
+            print(title)
+            classes[i] = {
+                "name": title,
+                "subs": rest and GetClasses(page + rest, low, high) or {}
+            }
     
-    print('Found ' + str(len(classes)) + ' item classes')
     return classes
+    
+    
+# Parsing
+def GetJson(pattern, text):
+	match = re.search(pattern, text)
+	if match:
+         data = "".join(c for c in match.group(1) if ord(c) < 256)
+         data = re.sub('([{,])\s*(\w+)\s*:', FixJsonKeys, data)
+         data = re.sub('undefined', 'null', data)
+         data = re.sub(r'\\[^"]', FixBackslashes, data)
+         return json.loads(data)
 
-def GetNumber(key, text):
-    return GetValue(key, '(-*\d+)', text)
-
-def GetValue(key, kind, text):
-    match = re.search(key + '":' + kind, text)
-    if match:
-        return match.group(1)
+def FixJsonKeys(match):
+	return '{0}"{1}":'.format(match.group(1), match.group(2))
+ 
+def FixBackslashes(match):
+     return r'\\\\' + match.group(0)[-1:]
+     
+def GetTitle(text):
+    match = re.search('<h1 class="heading-size-1">(.+?)</h1>', text)
+    title = match.group(1).replace('&#039;', "'")
+    return title != "Page Not Found" and title
 
 
 # Hierarchization
 def Hierarchize(items):
     table = {}
-    
-    for item in items:   
+                    
+    for item in items:  
+        sections = re.match('(\d)(.+)', item['name'])
+        quality = int(sections.group(1))
+        name = sections.group(2)         
+            
         AddItem(SetTable(SetTable(SetTable(SetTable(table,
-            item['class']),
+            item['classs']),
                 item['subclass']),
                     item['slot']),
-                        item['level']),
-                            NumQualities - item['quality'],
-                                CompressInt(item['id'], 3) + item['name'])
+                        item.get('reqlevel', 0)),
+                            NumQualities - quality,
+                                CompressInt(item['id'], 3) + name)
         
     return table
 
@@ -86,36 +95,37 @@ def AddItem(table, quality, item):
     table[quality] += '_' + item
     
     
-# Class IDs
+# Class List  
+def CleanClassNames(classes, toRemove = 'Items'):
+    for classs in classes.itervalues():
+        classs['name'] = re.sub('\s+', ' ' ,
+                         re.sub('[(\s]?' + toRemove + '[)\s]?', '', classs['name']))
+                         
+        CleanClassNames(classs['subs'], toRemove)
+        CleanClassNames(classs['subs'], classs['name'])
+        
 def GenerateClassIDs(classes, items):
-    ids = [None, 0, 0, 0]
-    lastLevel = 0
     record = ''
-
-    for c in classes:
-        table = items
-
-        for i in xrange(1, c['level']):
-            table = table.get(ids[i])
-            if not table:
-                break
+    struct = {}
+    index = 0
     
-        for i in xrange(c['level'] + 1, 4):
-            ids[i] = 0
+    for i, classs in classes.iteritems():
+        if items.get(i) and classs['name'] != '':
+            record += '{"' + classs['name'] + '"'
+            [content, subs] = GenerateClassIDs(classs['subs'], items[i])
+            
+            if subs != '':
+                record += "," + subs + "},"
+            else:
+                record += "},"
+                      
+            index += 1
+            struct[index] = content
     
-        if table and table.get(c['id']):
-            off = c['level'] - lastLevel
-            record += ',{' * off
-            record += '}}' * (-off)
-            record += off <= 0 and '},' or ''
-            record += '{"' + c['name'] + '"'
-            lastLevel = c['level']
-            
-            ids[c['level']] += 1            
-            table[ids[c['level']]] = table[c['id']]
-            del table[c['id']]
-            
-    return record[1:] + '}}' * lastLevel
+    if record != '':
+        return struct, '{' + record[:-1] + '}'
+    else:
+        return items, record
   
   
 # Formatting

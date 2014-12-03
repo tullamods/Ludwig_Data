@@ -1,4 +1,4 @@
-## Interface: 50400
+## Interface: 60000
 ## Title: |cffbd40bdLudwig Data|r
 ## Author: Tuller & Jaliborc (João Cardoso)
 ## Notes: Load on demand database for Ludwig
