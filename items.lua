@@ -155,5 +155,5 @@ function ItemDB:GetItem(data, index)
 end
 
 function ItemDB:GetItemLink(id, name, quality)
-	return ('%s|Hitem:%d:::::::::::|h[%s]|h|r'):format(ITEM_QUALITY_COLORS[quality].hex, id, name)
+	return ('%s|Hitem:%d:::::::::::::::|h[%s]|h|r'):format(ITEM_QUALITY_COLORS[quality].hex, id, name)
 end
