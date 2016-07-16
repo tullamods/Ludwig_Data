@@ -3,6 +3,7 @@
 
 	Usage:
 		:GetItems(name, category, quality, minLevel, maxLevel)
+		:GetClosestItem(search)
 		
 		:GetItem(data, index)
 		:GetItemLink(id, name, quality)
@@ -11,67 +12,56 @@
 		:HasSubCategories(subs, level)
 --]]
 
-local Markers, Cache = {'¤', '¢', '€', '£', '฿'}, {}
+local Markers, Cache = {'$', '%', '^', '*', '+'}, {}
 local ItemDB = Ludwig:NewModule('ItemDB')
 
-local LEVEL_MATCH = '(.)' .. Markers[4] .. '(.-)' .. Markers[4]
-local QUALITY_MATCH = '(.)' .. Markers[5] .. '$'
-local ITEM_MATCH = '(.-)_(...)([^_^]+)'
+local LEVEL_MATCH = '(%d+)%' .. Markers[4] .. '([^%' .. Markers[4] .. ']+)'
+local QUALITY_MATCH = '(%d+)%' .. Markers[5]
+local ITEM_MATCH = '(.-)(%w%w%w%w)([^_]+)'
 
 local function newCache()
 	local t = {}
 	for i = 0, #ITEM_QUALITY_COLORS do
-		t[strchar(i)] = {}
+		t[tostring(i)] = {}
 	end
 	return t
 end
 
 local function improveCache(table)
 	for i, v in pairs(table) do
-		table[strbyte(i)] = v
+		table[tonumber(i)] = v
 	end
 	return table
-end
-
-local function strint(s)
-	local v, d = 0
-	for i = 1, #s do
-		d = strbyte(s, i)
-		if d > 90 then
-			d = d - 5
-		end
-
-		v = v + d * 122 ^ (#s - i)
-	end
-	return v
 end
 
 
 --[[ Searches ]]--
 
-function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
-	local quality = quality and strchar(quality)
+function ItemDB:GetItems(name, class, minLevel, maxLevel, quality)
+	local quality = quality and tostring(quality)
 	local search = name and {strsplit(' ', name:lower())}
 	local ids, names, limits = newCache(), newCache(), {}
 	local data, list, numResults = Ludwig_Items, {}, 0
 
-	-- Category
-	if category then
+	-- Class
+	if class then
 		local match = ''
-		for i, value in ipairs(category) do
-			match = match .. '.-' .. strchar(value) .. Markers[i]
+		for i, value in ipairs(class) do
+			match = match .. tostring(value) .. '%' .. Markers[i] .. '.-'
 		end
 		
-		data = data:match(match .. '(.-)' .. Markers[#category])
+		match = match:sub(1, -3) .. '([^%' .. Markers[#class] .. ']+)'
+		data = data:match(match)
 	end
 
 	-- Level
 	if minLevel or maxLevel then
-		local minLevel = strchar(minLevel or 0)
-		local maxLevel = strchar(maxLevel or 126)
+		minLevel = tonumber(minLevel or 0)
+		maxLevel =  tonumber(maxLevel or 1000)
 		local results = ''
 		
 		for level, items in data:gmatch(LEVEL_MATCH) do
+			level = tonumber(level)
 			if level >= minLevel and level <= maxLevel then
 				tinsert(list, items)
 			end
@@ -80,9 +70,9 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 		tinsert(list, data)
 	end
 	
-	-- Name/Quality
 	for _, items in ipairs(list) do
 		for extra, id, name in items:gmatch(ITEM_MATCH) do
+			-- Quality
 			local q = extra:match(QUALITY_MATCH)
 			if q then
 				if not quality or q == quality then
@@ -92,7 +82,8 @@ function ItemDB:GetItems(name, category, minLevel, maxLevel, quality)
 					qualityIDs = nil
 				end
 			end
-			
+
+			-- Name
 			if qualityIDs then
 				local match = true
 				
@@ -145,7 +136,9 @@ function ItemDB:GetClosestItem(search)
 		end
 	end
 
-	return strint(bestID), bestName, strbyte(bestQuality)
+	if bestID then
+		return tonumber(bestID, 36), bestName, tonumber(bestQuality)
+	end
 end
 
 
@@ -156,11 +149,11 @@ function ItemDB:GetItem(data, index)
 	for q = 0, #ITEM_QUALITY_COLORS do
 		if limits[q] >= index then
 			index = index - (limits[q - 1] or 0)
-			return strint(ids[q][index]), names[q][index], q
+			return tonumber(ids[q][index], 36), names[q][index], q
 		end
 	end
 end
 
 function ItemDB:GetItemLink(id, name, quality)
-	return ('%s|Hitem:%d:0:0:0:0:0:0:0:0:0:0|h[%s]|h|r'):format(ITEM_QUALITY_COLORS[quality].hex, id, name)
+	return ('%s|Hitem:%d:::::::::::|h[%s]|h|r'):format(ITEM_QUALITY_COLORS[quality].hex, id, name)
 end
