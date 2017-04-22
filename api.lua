@@ -3,9 +3,8 @@
 
 	Usage:
 		:GetItems(name, category, quality, minLevel, maxLevel)
-		:GetClosestItem(search)
-
 		:GetItem(data, index)
+		:GetClosestItem(search)
 		:GetItemLink(id, name, quality)
 --]]
 
