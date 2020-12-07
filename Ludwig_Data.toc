@@ -1,11 +1,10 @@
-## Interface: 70200
+## Interface: 11305
 ## Title: |cffbd40bdLudwig Data|r
 ## Author: Tuller & Jaliborc (João Cardoso)
 ## Notes: Load on demand database for Ludwig
-## Version: 7.2.0
+## Version: 9.0
 
 ## Dependencies: Ludwig
 ## LoadOnDemand: 1
 
-data.lua
-api.lua
+..\Ludwig\addons\data\data.xml
